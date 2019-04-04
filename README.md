@@ -3,7 +3,7 @@ A real ~~MOS~~ 6502 connected to Virtual Memory/Devices
 
 1. 6502-Mega-Simple
 
-  6502 Address Bus, Data Bus and Control Lines connected to an Arduino Mega 256:
+  6502 Address Bus, Data Bus and Control Lines connected to an Arduino Mega 2560:
   * Address Bus on ports PA and PC (22 to 29 and 37 to 30)
   * Data Bus on port PL (49 to 42)
   * Clock (PHI0) on PD7 (pin 38) - 5Hz to ¿100KHz?
@@ -16,7 +16,7 @@ A real ~~MOS~~ 6502 connected to Virtual Memory/Devices
     * the rw line and the data and addres bus is processed using C arrays as virtual RAM/ROM and that info is displayed on Serial
     * pin 53 is low and you can see it on an osciloscoppe 
   
-  <img src="./images/6502-Mega-Simple-kicad.png" width="640">
+  <a href="./pdf/6502-Mega-Simple.pdf"><img src="./images/6502-Mega-Simple-kicad.png"></a>
   <img src="./images/6502-Mega-Simple.png" width="640">
   <img src="./images/6502-Mega-Simple-01.png" width="640">
 
@@ -24,5 +24,5 @@ A real ~~MOS~~ 6502 connected to Virtual Memory/Devices
 
   Same as (1), but add an oled SSD1306 is used instead Serial. Displaying data in the oled is slow
   
- <img src="./images/6502-Mega-Simple-Oled-kicad.png" width="640">
- <img src="./images/6502-Mega-Simple-Oled.png" width="640">
+ <a href="./pdf/6502-Mega-Simple-Oled.pdf"><img src="./images/6502-Mega-Simple-Oled-kicad.png"></a>
+ <img src="./images/6502-Mega-Simple-Oled.png">
