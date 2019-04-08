@@ -118,9 +118,9 @@ void setup() {
 void loop() {
   uint16_t addr;            // 6502 address bus
   uint8_t b, phi2, rw;      // a byte and the 6502 phi2 and rw lines
-  char line[128];           // to debug
   uint8_t boot = true;      // 6502 is booting
   uint8_t go = true;        // go on phi2 rising edge
+  char line[128];           // to debug
 
   // wait some cycles
   b = 0;

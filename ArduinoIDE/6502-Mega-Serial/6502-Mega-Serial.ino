@@ -36,31 +36,20 @@
  
 #include <Arduino.h>
 
-#define MY_DEBUG            1
-
 // Clock Period in microseconds (divisible by 4)
 //#define FREQ_6502         1000000UL   // 1Hz
-#define FREQ_6502          200000UL   // 5Hz
+//#define FREQ_6502          200000UL   // 5Hz
 //#define FREQ_6502          100000UL   // 10Hz
 //#define FREQ_6502           40000UL   // 25Hz
 //#define FREQ_6502           10000UL   // 100Hz
+//#define FREQ_6502           6000UL   // 166.66Hz
+#define FREQ_6502           5400UL   // 185.185Hz
+//#define FREQ_6502            5000UL   // 200Hz  -- limit?
 //#define FREQ_6502            1000UL   // 1KHz  
-//#define FREQ_6502             400UL   // 2.5KHz   ok
-//#define FREQ_6502             100UL   // 10KHz    Don't use Serial.print
-//#define FREQ_6502              32UL   // 31.250KHz
-//#define FREQ_6502              20UL   // 50KHz
-//#define FREQ_6502               4UL   // 250KHz
-
-// Memory
-#define DATA_SIZE       0x1000                    // 4 KBytes of RAM
-#define CODE_SIZE       0x0800                    // 2 KBytes of ROM
-#define CODE_BASE       (0xFFFF - CODE_SIZE + 1)  // ROM Start Address 0xF800
- 
-uint8_t data[CODE_SIZE];
-uint8_t code[CODE_SIZE ] = {
-  0xA2, 0x00, 0x8A, 0x9D, 0x00, 0x04, 0xE8, 0x38, 0xB0, 0xF8
-};
-
+//#define FREQ_6502             400UL   // 2.5KHz   
+//#define FREQ_6502             200UL   // 5KHz 
+//#define FREQ_6502             128UL   // 7.8125KHz   
+//#define FREQ_6502             100UL   // 10KHz   
 
 void setup() {
   // 6502 RST: PG0
@@ -93,21 +82,13 @@ void setup() {
   DDRB  |= B00000001;       // ouput
   PORTB &= B11111110;       // LOW first time
 
-  // 6502 vectors
-  code[ 0xFFFF - CODE_BASE ] =  0x00; // IRQ/BRK high
-  code[ 0xFFFE - CODE_BASE ] =  0x00; // IRQ/BRK low
-  code[ 0xFFFD - CODE_BASE ] =  ((CODE_BASE & 0xFF00)>>8);  // RESET high
-  code[ 0xFFFC - CODE_BASE ] =  (CODE_BASE &0xFF);          // RESET low
-  code[ 0xFFFB - CODE_BASE ] =  0x00; // NMI high
-  code[ 0xFFFA - CODE_BASE ] =  0x00; // NMI low
-
-  // Serial
-#if MY_DEBUG
+  // Serial conn
   Serial.begin( 1000000 );
-  Serial.println();
-  Serial.println();
-  Serial.println( "READY" );
-#endif
+  delay( 500 );
+  Serial.flush();
+  while( Serial.available() > 0 )
+    Serial.read();
+  delay( 500 );
 }
 
 
@@ -116,8 +97,15 @@ void loop() {
   uint8_t b, phi2, rw;      // a byte and the 6502 phi2 and rw lines
   uint8_t boot = true;      // 6502 is booting
   uint8_t go = true;        // go on phi2 rising edge
-  char line[128];           // to debug
+  uint8_t data_out[4];           
 
+  // SYNC with memory/devices server
+  while( ( Serial.read() ) != 0xAA );
+  while( ( Serial.read() ) != 0xAA );
+  Serial.write( 0x55 );
+  Serial.flush();
+  delay( 2000 );
+  
   // wait some cycles
   b = 0;
   while( b<5 ){
@@ -148,10 +136,6 @@ void loop() {
         // booting? need =xFFFC on address bus
         if( boot ){
             if( addr != 0xFFFC ){
-              #if MY_DEBUG
-              sprintf( line, "%c %04X waiting", rw ? 'R': 'W', addr );
-              Serial.println( line );
-              #endif
               go = false;
               continue;
             }
@@ -161,10 +145,21 @@ void loop() {
         // init debug
         PORTB |= B00000001;
 
+        data_out[1] = (addr>>8) & 0xFF;
+        data_out[2] = addr & 0xFF;
+        
         // read from memory/peripheral
         if( rw ){
-          // get the byte from the memory/peripheral
-          b = doMemoryManagement( rw, addr, 0x00 );
+          // request the byte from the memory/peripheral
+          data_out[0] = 'R';
+          data_out[3] = 0x00;
+          
+          Serial.write( data_out, 4 );
+          Serial.flush();
+          
+          // get the byte
+          while( Serial.available()<= 0 );
+          b = Serial.read() & 0xFF;
           
           // put it on data bus
           DDRL = B11111111;     // output mode
@@ -176,14 +171,18 @@ void loop() {
           b = PINL;
 
           // send it to memory/peripheral
-          doMemoryManagement( rw, addr, b );
-        }
+          data_out[0] = 'W';
+          data_out[3] = b;
+          
+          Serial.write( data_out, 4 );
+          Serial.flush();
 
+          // get answer
+          while( Serial.available()<= 0 );
+          Serial.read() & 0xFF;
+        }
+        
         // end debug
-        #if MY_DEBUG
-        sprintf( line, "%c %04X %02X     ", rw ? 'R' : 'W', addr, (unsigned int)b );
-        Serial.println( line );
-        #endif
         PORTB &= B11111110;
 
         go = false;
@@ -224,22 +223,4 @@ byte doClock(){
 uint8_t setHIZ(){
   DDRL   = B00000000;       // input mode
   PORTL  = B00000000;       // disable pullup
-}
-
-uint8_t doMemoryManagement( uint8_t rw, uint16_t addr, uint8_t b ){
-  // RAM
-  if( addr>= 0x0000 && addr < DATA_SIZE ){
-    if( rw )
-      return data[addr];
-    else
-      data[addr]=b;
-  }
-  // ROM/CODE
-  else if( addr >= CODE_BASE && addr <= 0xFFFF ){
-    if( rw )
-      return code[addr - CODE_BASE];
-  }
-  // I/O mapping
-  else{
-  }
 }
