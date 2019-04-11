@@ -30,10 +30,8 @@ A real ~~MOS~~ 6502 connected to Virtual Memory/Devices
 3. ./ArduinoIDE/6502-Mega-Serial
 
   Arduino Mega 2560 acts as a bridge between the 6502 CPU and a Python program as "memory" provider:
-  * My linux notebook supports 1000000 as baudrate and the USB add about 2ms delay so I'm using "FREQ_6502 5400L (185.185Hz)" as a max clock for the 6502
-  * Connect the board, select the FREQ_6502, adust the Serial baud rate and upload the code
+  * Connect the board, select the FREQ_6502, adjust the Serial baud rate and upload the code
   * Run "6502-Mega-FunctionalTest.py" (it uses a RAM/ROM image to test the 6502 - https://github.com/Klaus2m5/6502_65C02_functional_tests)
-  * Wait 3, 4 or 5 hours to finish (remember the clock is 185.185Hz)
-  * Sending the request through the serial port and waiting for the response takes about 2.58ms (blue waveform in the image)
+  * Wait 3, 4 or 90 hours to finish (remember the 6502 clock)
 
   <img src="./images/6502-Mega-Serial-Osc.jpg" width="640">

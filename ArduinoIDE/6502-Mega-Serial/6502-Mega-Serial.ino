@@ -33,7 +33,6 @@
     Para debug:
       DBG_MCU         : PB0       (53)
 */
- 
 #include <Arduino.h>
 
 // Clock Period in microseconds (divisible by 4)
@@ -43,8 +42,10 @@
 //#define FREQ_6502           40000UL   // 25Hz
 //#define FREQ_6502           10000UL   // 100Hz
 //#define FREQ_6502           6000UL   // 166.66Hz
-#define FREQ_6502           5400UL   // 185.185Hz
-//#define FREQ_6502            5000UL   // 200Hz  -- limit?
+//#define FREQ_6502           5400UL   // 185.185Hz
+//#define FREQ_6502            5000UL   // 200Hz
+//#define FREQ_6502            2000UL   // 500Hz
+#define FREQ_6502            1200UL   // 833.33Hz
 //#define FREQ_6502            1000UL   // 1KHz  
 //#define FREQ_6502             400UL   // 2.5KHz   
 //#define FREQ_6502             200UL   // 5KHz 
@@ -83,6 +84,7 @@ void setup() {
   PORTB &= B11111110;       // LOW first time
 
   // Serial conn
+  //Serial.begin( 1000000 );
   Serial.begin( 1000000 );
   delay( 500 );
   Serial.flush();
@@ -97,7 +99,7 @@ void loop() {
   uint8_t b, phi2, rw;      // a byte and the 6502 phi2 and rw lines
   uint8_t boot = true;      // 6502 is booting
   uint8_t go = true;        // go on phi2 rising edge
-  uint8_t data_out[4];           
+  uint8_t packet[32];       // USB buffer size?
 
   // SYNC with memory/devices server
   while( ( Serial.read() ) != 0xAA );
@@ -130,11 +132,12 @@ void loop() {
     if( phi2 ){
       // only once
       if( go ){
-        // address bus
-        addr = ( ((uint16_t)PINC)<<8 ) | PINA;
-
         // booting? need =xFFFC on address bus
         if( boot ){
+            // address bus
+            addr = ( ((uint16_t)PINC)<<8 ) | PINA;
+
+            // reset vector
             if( addr != 0xFFFC ){
               go = false;
               continue;
@@ -145,16 +148,17 @@ void loop() {
         // init debug
         PORTB |= B00000001;
 
-        data_out[1] = (addr>>8) & 0xFF;
-        data_out[2] = addr & 0xFF;
+        // address bus
+        packet[1] = PINC; // (addr>>8) & 0xFF;
+        packet[2] = PINA; // addr & 0xFF;
         
         // read from memory/peripheral
         if( rw ){
           // request the byte from the memory/peripheral
-          data_out[0] = 'R';
-          data_out[3] = 0x00;
+          packet[0] = 'R';
+          packet[3] = 0x00;
           
-          Serial.write( data_out, 4 );
+          Serial.write( packet, sizeof( packet ) );
           Serial.flush();
           
           // get the byte
@@ -171,10 +175,10 @@ void loop() {
           b = PINL;
 
           // send it to memory/peripheral
-          data_out[0] = 'W';
-          data_out[3] = b;
+          packet[0] = 'W';
+          packet[3] = b;
           
-          Serial.write( data_out, 4 );
+          Serial.write( packet, sizeof( packet ) );
           Serial.flush();
 
           // get answer

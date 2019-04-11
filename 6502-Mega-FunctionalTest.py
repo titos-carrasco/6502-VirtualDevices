@@ -11,7 +11,7 @@ def main():
     # fix RST vector (start address is $0400 - success when addr = 0x3469)
     memory[ 0xFFFC ] = 0x00
     memory[ 0xFFFD ] = 0x04
-    success = 0x3469
+    last = 0x3469 + 2
 
     # connecting to the bridge
     print( '# Connecting to the bridge', flush=True )
@@ -40,37 +40,39 @@ def main():
         return
     print( '# SYNC: OK', flush=True )
 
-    # show time
-    ba = bytearray( 1 )
+    # show time ( nb = USB buffer size? 2ms latency )
+    nb = 32
+    data_out = bytearray( 1 )
     t0 = time.time()
+    cnt = 0
     while( True ):
-        cmd   = ser.read( 1 )[0]
-        addrH = ser.read( 1 )[0]
-        addrL = ser.read( 1 )[0]
-        addr  = ( ( addrH<<8 ) & 0xFF00 ) | ( addrL & 0xFF )
-        b     = ser.read( 1 )[0]
+        data_in = ser.read( nb )
+        cmd   = data_in[0]
+        addrH = data_in[1]
+        addrL = data_in[2]
+        addr  = ( ( addrH & 0x00FF) << 8 ) | ( addrL & 0x00FF )
+        b     = data_in[3]
 
-        # 'R': red memory from memory
+        # 'R': read memory from memory
         if( cmd == 0x52 ):
             b = memory[ addr ]
-            ba[ 0 ] = b
-            ser.write( ba )
-            ser.flush()
         # 'W': write byte to memory
         elif( cmd == 0x57 ):
             memory[ addr ] = b
-            ba[ 0 ] = b
-            ser.write( ba )
-            ser.flush()
+
+        # returns the byte
+        data_out[ 0 ] = b
+        ser.write( data_out )
+        ser.flush()
 
         # some debug
-        print( "%c %04X %02X" % ( cmd, addr, b ) )
+        cnt = cnt + 1
+        print( "%010d %c %04X %02X %f(s)" % ( cnt, cmd, addr, b, time.time() - t0  ), flush=True )
+        #print( "%c %04X %02X" % ( cmd, addr, b  ), flush=True )
 
-        # test end
-        if( addr == success + 2 ):
-            print( '# SUCESS: %f (s)' % ( time.time() - t0 ), flush = True )
-            while( True ):
-                pass
+        if( addr == last ):
+            return
+
 
 # show time
 main()
