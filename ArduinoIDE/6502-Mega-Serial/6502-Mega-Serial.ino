@@ -45,12 +45,14 @@
 //#define FREQ_6502           5400UL   // 185.185Hz
 //#define FREQ_6502            5000UL   // 200Hz
 //#define FREQ_6502            2000UL   // 500Hz
-#define FREQ_6502            1200UL   // 833.33Hz
+//#define FREQ_6502            1200UL   // 833.33Hz
 //#define FREQ_6502            1000UL   // 1KHz  
 //#define FREQ_6502             400UL   // 2.5KHz   
 //#define FREQ_6502             200UL   // 5KHz 
 //#define FREQ_6502             128UL   // 7.8125KHz   
 //#define FREQ_6502             100UL   // 10KHz   
+//#define FREQ_6502             4UL   // 250KHz
+#define FREQ_6502             1UL   // 1MHz
 
 void setup() {
   // 6502 RST: PG0
@@ -84,12 +86,10 @@ void setup() {
   PORTB &= B11111110;       // LOW first time
 
   // Serial conn
-  //Serial.begin( 1000000 );
   Serial.begin( 1000000 );
   delay( 500 );
   Serial.flush();
-  while( Serial.available() > 0 )
-    Serial.read();
+  while( Serial.read() != -1 );
   delay( 500 );
 }
 
@@ -99,7 +99,7 @@ void loop() {
   uint8_t b, phi2, rw;      // a byte and the 6502 phi2 and rw lines
   uint8_t boot = true;      // 6502 is booting
   uint8_t go = true;        // go on phi2 rising edge
-  uint8_t packet[32];       // USB buffer size?
+  uint8_t packet[32];
 
   // SYNC with memory/devices server
   while( ( Serial.read() ) != 0xAA );
@@ -160,7 +160,7 @@ void loop() {
           
           Serial.write( packet, sizeof( packet ) );
           Serial.flush();
-          
+
           // get the byte
           while( Serial.available()<= 0 );
           b = Serial.read() & 0xFF;

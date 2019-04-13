@@ -40,20 +40,19 @@ def main():
         return
     print( '# SYNC: OK', flush=True )
 
-    # show time ( nb = USB buffer size? 2ms latency )
-    nb = 32
+    # show time
     data_out = bytearray( 1 )
     t0 = time.time()
     cnt = 0
     while( True ):
-        data_in = ser.read( nb )
+        data_in = ser.read( 32 )    # CH340g buffers 32 bytes
         cmd   = data_in[0]
         addrH = data_in[1]
         addrL = data_in[2]
         addr  = ( ( addrH & 0x00FF) << 8 ) | ( addrL & 0x00FF )
         b     = data_in[3]
 
-        # 'R': read memory from memory
+        # 'R': read byte from memory
         if( cmd == 0x52 ):
             b = memory[ addr ]
         # 'W': write byte to memory
