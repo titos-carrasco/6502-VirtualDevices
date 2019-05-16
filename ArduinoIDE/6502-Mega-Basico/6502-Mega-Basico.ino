@@ -1,9 +1,9 @@
 /*
-  6502 CPU connected with an Arduino Mega 2560
+  6502 CPU connected with an Arduino Mega 2560 
 
   DDRx  = port X Data Direction Register
   PINx  = port X Input Pins Register
-  PORTx = port X Data Register
+  PORTx = port X Data Register 
   Port     7   6   5   4   3   2   1   0
   ------ |---|---|---|---|---|---|---|---|
   digital
@@ -29,11 +29,11 @@
       RW              : PG1       (40)
       RST             : PG0       (41)
       Data Bus        : PL0-PL7   (49 to 42)
-
+    
     Para debug:
       DBG_MCU         : PB0       (53)
 */
-
+ 
 #include <Arduino.h>
 
 #define MY_DEBUG            1
@@ -44,32 +44,12 @@
 //#define FREQ_6502          100000UL   // 10Hz
 //#define FREQ_6502           40000UL   // 25Hz
 //#define FREQ_6502           10000UL   // 100Hz
-//#define FREQ_6502            1000UL   // 1KHz
+//#define FREQ_6502            1000UL   // 1KHz  
 //#define FREQ_6502             400UL   // 2.5KHz   ok
 //#define FREQ_6502             100UL   // 10KHz    Don't use Serial.print
 //#define FREQ_6502              32UL   // 31.250KHz
 //#define FREQ_6502              20UL   // 50KHz
 //#define FREQ_6502               4UL   // 250KHz
-
-// Memory
-#define DATA_SIZE       0x1000                    // 4 KBytes of RAM
-#define CODE_SIZE       0x0800                    // 2 KBytes of ROM
-#define CODE_BASE       (0xFFFF - CODE_SIZE + 1)  // ROM Start Address 0xF800
-
-uint8_t data[CODE_SIZE];
-/*
-                  * = F800
-F800   A2 00      LDX #$00
-F802   8A         TXA
-F803   9D 00 04   STA $0400,X
-F806   E8         INX
-F807   38         SEC
-F808   B0 F8      BCS $F802
-F80A              .END
- */
-uint8_t code[CODE_SIZE ] = {
-  0xA2, 0x00, 0x8A, 0x9D, 0x00, 0x04, 0xE8, 0x38, 0xB0, 0xF8
-};
 
 
 void setup() {
@@ -79,12 +59,12 @@ void setup() {
 
   // 6502 RW: PG1
   DDRG  &= B11111101;       // input
-  PORTG &= B11111101;       // disable pullup
+  PORTG &= B11111101;       // disable pullup    
 
   // 6502 PHI2: PG2
   DDRG  &= B11111011;       // input
-  PORTG &= B11111011;       // disable pullup
-
+  PORTG &= B11111011;       // disable pullup  
+  
   // 6502 PHI0: PD7
   DDRD  |= B10000000;       // output
   PORTD &= B01111111;       // LOW first time
@@ -99,17 +79,9 @@ void setup() {
   DDRL   = B00000000;       // input
   PORTL  = B00000000;       // disable pullup
 
-  // Debug: PB0
+  // Debug: PB0 
   DDRB  |= B00000001;       // ouput
   PORTB &= B11111110;       // LOW first time
-
-  // 6502 vectors
-  code[ 0xFFFF - CODE_BASE ] =  0x00; // IRQ/BRK high
-  code[ 0xFFFE - CODE_BASE ] =  0x00; // IRQ/BRK low
-  code[ 0xFFFD - CODE_BASE ] =  ((CODE_BASE & 0xFF00)>>8);  // RESET high
-  code[ 0xFFFC - CODE_BASE ] =  (CODE_BASE &0xFF);          // RESET low
-  code[ 0xFFFB - CODE_BASE ] =  0x00; // NMI high
-  code[ 0xFFFA - CODE_BASE ] =  0x00; // NMI low
 
   // Serial
 #if MY_DEBUG
@@ -132,17 +104,17 @@ void loop() {
   b = 0;
   while( b<5 ){
     if( doClock() == 0x81 )
-      b++;
+      b++;  
   }
-
+  
   // start the 6502
   PORTG |= B00000001;       // RST to HIGH
-
+  
   // forever
   while( 1 ){
     // 6502 PHI0
     doClock();
-
+    
     // need PHI2 and RW
     b = PING;
     phi2 = b & B00000100;
@@ -175,7 +147,7 @@ void loop() {
         if( rw ){
           // get the byte from the memory/peripheral
           b = doMemoryManagement( rw, addr, 0x00 );
-
+          
           // put it on data bus
           DDRL = B11111111;     // output mode
           PORTL = b;            // the byte
@@ -202,10 +174,10 @@ void loop() {
     else {
       // HI-Z data bus on phi2 falling edge
       setHIZ();
-
+      
       // for the next phi2 rising edge
       go = true;
-    }
+    }    
   }
 }
 
@@ -225,7 +197,7 @@ byte doClock(){
       PORTD |= B10000000;
       return 0x81;
     }
-  }
+  }  
   return 0x00;
 }
 
@@ -236,20 +208,7 @@ uint8_t setHIZ(){
   PORTL  = B00000000;       // disable pullup
 }
 
+
 uint8_t doMemoryManagement( uint8_t rw, uint16_t addr, uint8_t b ){
-  // RAM
-  if( addr>= 0x0000 && addr < DATA_SIZE ){
-    if( rw )
-      return data[addr];
-    else
-      data[addr]=b;
-  }
-  // ROM/CODE
-  else if( addr >= CODE_BASE && addr <= 0xFFFF ){
-    if( rw )
-      return code[addr - CODE_BASE];
-  }
-  // I/O mapping
-  else{
-  }
+  return 0xEA; // NOP
 }
